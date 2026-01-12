@@ -1,0 +1,477 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { obtenerDetallesPokemon } from '../../utils/api.js';
+import type { TipoInfo, Estadistica, Habilidad } from '../../types/pokemon';
+
+// Rutas dinámicas
+export async function getStaticPaths() {
+  const primerosPokemon = Array.from({ length: 10325 }, (_, i) => ({ //número según los Pokémon disponibles
+    params: { 
+      id: (i + 1).toString()  
+    }
+  }));
+  
+  return primerosPokemon;
+}
+
+// Obtener el id de la URL
+const { id } = Astro.params;
+
+// Fetch datos del Pokémon
+const pokemon = await obtenerDetallesPokemon(id);
+
+// Si no existe el Pokémon redirigir al home
+if (!pokemon) {
+  return Astro.redirect('/');
+}
+
+// Construir título dinámico para el Layout
+const nombreFormateado = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+const pageTitle = `${nombreFormateado} - Pokédex App`;
+
+// Colores para cada tipo
+const coloresTipos: Record<string, string> = {
+  normal: '#A8A878',
+  fire: '#F08030',
+  water: '#6890F0',
+  grass: '#78C850',
+  electric: '#F8D030',
+  ice: '#98D8D8',
+  fighting: '#C03028',
+  poison: '#A040A0',
+  ground: '#E0C068',
+  flying: '#A890F0',
+  psychic: '#F85888',
+  bug: '#A8B820',
+  rock: '#B8A038',
+  ghost: '#705898',
+  dark: '#705848',
+  dragon: '#7038F8',
+  steel: '#B8B8D0',
+  fairy: '#EE99AC'
+};
+
+function formatearNombre(nombre: string): string {
+  return nombre.charAt(0).toUpperCase() + nombre.slice(1);
+}
+
+function formatearTexto(texto: string): string {
+  return texto.split('-').map(palabra => 
+    palabra.charAt(0).toUpperCase() + palabra.slice(1)
+  ).join(' ');
+}
+
+function obtenerColorTipo(tipoNombre: string): string {
+  return coloresTipos[tipoNombre.toLowerCase()] || '#777';
+}
+---
+
+<Layout title={pageTitle}>
+  <div class="detalle-pokemon">
+    <!-- btn para volver -->
+    <a href="/" class="boton-volver">Volver a la Pokédex</a>
+    
+    <!-- contenedor principal -->
+    <div class="contenedor-detalle">
+      <!-- encabezado con id y nombre -->
+      <div class="encabezado">
+        <h1 class="nombre-pokemon"> {formatearNombre(pokemon.name)} </h1>
+        <span class="id-pokemon">
+          #{pokemon.id.toString().padStart(3, '0')}
+        </span>
+      </div>
+      
+      <!-- contenido principal imagen e info -->
+      <div class="contenido">
+        <!-- sección para imágenes -->
+        <div class="seccion-imagenes">
+          <div class="imagen-principal">
+            <img src={pokemon.sprites.other['official-artwork'].front_default || pokemon.sprites.front_default} alt={pokemon.name} loading="lazy"/>
+          </div>
+          
+          <!-- Imágenes adicionales -->
+          <div class="imagenes-secundarias">
+            <div class="imagen-mini">
+              <p>Front</p>
+              <img src={pokemon.sprites.front_default} alt={`${pokemon.name} front`} />
+            </div>
+            <div class="imagen-mini">
+              <p>Back</p>
+              <img src={pokemon.sprites.back_default} alt={`${pokemon.name} back`} />
+            </div>
+            <div class="imagen-mini">
+              <p>Shiny</p>
+              <img src={pokemon.sprites.front_shiny} alt={`Shiny ${pokemon.name}`} />
+            </div>
+          </div>
+        </div>
+        
+        <!-- Sección de información -->
+        <div class="seccion-info">
+          <!-- Tipos del pokemon -->
+          <div class="tarjeta-info">
+            <h2>Tipo{pokemon.types.length > 1 ? 's' : ''}</h2>
+            <div class="tipos">
+              {pokemon.types.map((tipoInfo: TipoInfo) => {
+                const tipoNombre = tipoInfo.type.name;
+                const color = obtenerColorTipo(tipoNombre);
+                return (
+                  <span 
+                    class="tipo" 
+                    style={`background-color: ${color}`}
+                  >
+                    {formatearNombre(tipoNombre)}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+          
+          <!-- Estadísticas -->
+          <div class="tarjeta-info">
+            <h2>Estadísticas</h2>
+            <div class="estadisticas">
+              {pokemon.stats.map((estadistica: Estadistica) => (
+                <div class="estadistica" data-stat={estadistica.stat.name}>
+                  <span class="nombre-estadistica">
+                    {formatearTexto(estadistica.stat.name)}
+                  </span>
+                  <div class="barra-contenedor">
+                    <div 
+                      class="barra-valor" 
+                      style={`width: ${Math.min(estadistica.base_stat, 150)}%; background-color: ${estadistica.base_stat > 90 ? '#4CAF50' : estadistica.base_stat > 60 ? '#FFC107' : '#FF5252'};`} >
+                      <span class="valor-estadistica">
+                        {estadistica.base_stat}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <!-- Información básica -->
+          <div class="tarjeta-info">
+            <h2>Información</h2>
+            <div class="grid-info">
+              <div class="item-info">
+                <h3>Altura</h3>
+                <p>{(pokemon.height / 10).toFixed(1)} m</p>
+              </div>
+              <div class="item-info">
+                <h3>Peso</h3>
+                <p>{(pokemon.weight / 10).toFixed(1)} kg</p>
+              </div>
+              <div class="item-info">
+                <h3>Habilidades</h3>
+                <div class="habilidades">
+                  {pokemon.abilities.map((habilidad: Habilidad) => (
+                    <span class="habilidad">{formatearTexto(habilidad.ability.name)}</span>
+                  ))}
+                </div>
+              </div>
+              <div class="item-info">
+                <h3>Experiencia Base</h3>
+                <p>{pokemon.base_experience || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Estilos -->
+  <style is:global>
+    /* Contenedor principal */
+    .detalle-pokemon {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    
+    /* Botón para volver */
+    .boton-volver {
+      display: inline-block;
+      margin-bottom: 2rem;
+      color: #4d8af0;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1.1rem;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      transition: background-color 0.3s;
+    }
+    
+    .boton-volver:hover {
+      background-color: rgba(77, 138, 240, 0.1);
+    }
+    
+    /* Contenedor de detalle */
+    .contenedor-detalle {
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Encabezado */
+    .encabezado {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .nombre-pokemon {
+      font-size: 2.8rem;
+      color: #333;
+      margin: 0;
+      text-transform: capitalize;
+    }
+    
+    .id-pokemon {
+      font-size: 1.8rem;
+      color: #666;
+      background: #f8f8f8;
+      padding: 0.5rem 1.2rem;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    
+    /* Contenido principal */
+    .contenido {
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 3rem;
+    }
+    
+    /* Sección de imágenes */
+    .seccion-imagenes {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    
+    .imagen-principal {
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      border-radius: 15px;
+      padding: 2rem;
+      text-align: center;
+    }
+    
+    .imagen-principal img {
+      width: 100%;
+      max-width: 300px;
+      height: auto;
+      filter: drop-shadow(0 5px 15px rgba(0,0,0,0.2));
+    }
+    
+    .imagenes-secundarias {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+    }
+    
+    .imagen-mini {
+      text-align: center;
+      background: #f8f8f8;
+      padding: 1rem;
+      border-radius: 10px;
+      flex: 1;
+    }
+    
+    .imagen-mini p {
+      margin: 0 0 0.5rem 0;
+      font-weight: 600;
+      color: #555;
+    }
+    
+    .imagen-mini img {
+      width: 80px;
+      height: 80px;
+    }
+    
+    /* Sección de información */
+    .seccion-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    
+    /* Tarjetas de información */
+    .tarjeta-info {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    
+    .tarjeta-info h2 {
+      margin: 0 0 1.5rem 0;
+      color: #444;
+      font-size: 1.5rem;
+    }
+    
+    /* Tipos */
+    .tipos {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+    
+    .tipo {
+      padding: 0.5rem 1.2rem;
+      border-radius: 20px;
+      color: white;
+      font-weight: 600;
+      text-transform: capitalize;
+      font-size: 0.95rem;
+    }
+    
+    /* Estadísticas */
+    .estadisticas {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .estadistica {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .nombre-estadistica {
+      width: 140px;
+      text-transform: capitalize;
+      color: #555;
+      font-weight: 500;
+    }
+    
+    .barra-contenedor {
+      flex: 1;
+      height: 28px;
+      background: #e0e0e0;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .barra-valor {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 10px;
+      border-radius: 6px;
+      min-width: 40px;
+      transition: width 0.5s ease-out;
+    }
+    
+    .valor-estadistica {
+      color: white;
+      font-weight: bold;
+      font-size: 0.9rem;
+      text-shadow: 1px 1px 1px rgba(0,0,0,0.2);
+    }
+    
+    /* Grid de información */
+    .grid-info {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+    
+    .item-info h3 {
+      color: #666;
+      margin: 0 0 0.5rem 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    
+    .item-info p {
+      font-size: 1.3rem;
+      color: #333;
+      margin: 0;
+      font-weight: 500;
+    }
+    
+    /* Habilidades */
+    .habilidades {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    
+    .habilidad {
+      background: #07224E;
+      color: #FFCB08;
+      padding: 0.3rem 0.8rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      text-transform: capitalize;
+    }
+    
+    /* Responsive */
+    @media (max-width: 900px) {
+      .contenido {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+      }
+      
+      .seccion-imagenes {
+        align-items: center;
+      }
+      
+      .imagen-principal {
+        max-width: 400px;
+        margin: 0 auto;
+      }
+      
+      .imagenes-secundarias {
+        max-width: 400px;
+        margin: 0 auto;
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .detalle-pokemon {
+        padding: 0.5rem;
+      }
+      
+      .contenedor-detalle {
+        padding: 1.5rem;
+      }
+      
+      .encabezado {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .nombre-pokemon {
+        font-size: 2.2rem;
+      }
+      
+      .grid-info {
+        grid-template-columns: 1fr;
+      }
+      
+      .estadistica {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      
+      .nombre-estadistica {
+        width: 100%;
+      }
+      
+      .barra-contenedor {
+        width: 100%;
+      }
+    }
+  </style>
+</Layout>

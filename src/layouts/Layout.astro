@@ -1,0 +1,33 @@
+---
+const { title = 'Pokédex App' } = Astro.props;
+import '../styles/global.css';
+---
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{title || 'Pokédex App'}</title>
+</head>
+<body>
+    <header>
+        <div class="contenedor">
+            <h1 class="titulo-principal">Pokédex</h1>
+        </div>
+    </header>
+    
+    <!-- contenido principal -->
+    <main class="contenedor">
+        <slot />
+    </main>
+    
+    <!-- Footer -->
+    <footer>
+        <div class="contenedor">
+            <p>2025 Pokédex App - Desarrollado con Astro + React</p>
+            <p>Datos obtenidos de <a href="https://pokeapi.co" target="_blank" class="enlace" rel="noopener">PokéAPI</a></p>
+        </div>
+    </footer>
+</body>
+</html>
